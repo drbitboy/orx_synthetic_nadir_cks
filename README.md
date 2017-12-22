@@ -42,7 +42,7 @@ Make synthetic nadir-ish-pointing CKs for OSIRIS-REx
     pck00010.tpc
 
 
-### SPKs required, but not in .tar.gz; obtain from NAIF or FOB or SPOC
+### SPKs required (but not in repo or in kernels.tar.gz); obtain from NAIF or FOB or SPOC
 
     de424.bsp                
     bennu_refdrmc_v1.bsp
