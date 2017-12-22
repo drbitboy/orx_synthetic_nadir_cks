@@ -6,13 +6,14 @@ BSPS=$(RANGES:%=kernels/%m_9101955.bsp)
 PINPOINTS=$(BSPS:%.bsp=%.pinpoint)
 
 CKNADIRISH=kernels/orx_nadirish.bc
+CKCOMMS=kernels/orx_comms.bc
 
-all: $(BSPS) $(CKNADIRISH)
+all: $(BSPS) $(CKNADIRISH) $(CKCOMMS)
 
 test: all
 	python nadirish_ck.py test
 
-$(CKNADIRISH): nadirish_ck.py
+$(CKNADIRISH) $(CKCOMMS): nadirish_ck.py
 	python $< create
 
 %.bsp: %.pinpoint kernels/base_9101955.pinpoint
@@ -23,4 +24,4 @@ $(CKNADIRISH): nadirish_ck.py
 	sed '/^ALT_BENNU_XYZ *=/s/= ( xxx 0 0 )/= ( 0.$(@:kernels/%m_9101955.pinpoint=%) 0 0 )/' < $< > $@
 
 clean:
-	$(RM) $(PINPOINTS) $(BSPS) $(CKNADIRISH)
+	$(RM) $(PINPOINTS) $(BSPS) $(CKNADIRISH) $(CKCOMMS)
