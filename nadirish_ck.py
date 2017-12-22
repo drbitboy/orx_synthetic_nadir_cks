@@ -9,8 +9,11 @@ if "__main__" == __name__:
 
   metaK = 'kernels/orx_base_nadirish.tm'
   CK = 'kernels/orx_nadirish.bc'
+  CKcomms = 'kernels/orx_comms.bc'
   SPK = 'kernels/100m_9101955.bsp'
   utcs = '2018-229/12:00 2018-337/12:00 2019-140/12:00'.split()
+
+  spd = sp.spd()        ### Seconds Per Day
 
   sp.furnsh(metaK)
 
@@ -19,10 +22,12 @@ if "__main__" == __name__:
 
 
   ######################################################################
-  ### Write CK - single segment with ORX_SPACECRAFT (-64000) frame lining
-  ###            lining up with ORX_BENNU_SUN_NADIRISH frame, so actual
-  ###            location of 9101955 body when CK is searched will
-  ###            determine actual pointing
+  ### Write CKs
+  ### - Single segment with ORX_SPACECRAFT (-64000) frame lining lining
+  ###   up with ORX_BENNU_SUN_NADIRISH frame, so actual location of
+  ###   9101955 body when CK is searched will determine actual pointing
+  ### - Multiple segments, 8h out of 24 aligned with ORX_RTN_EARTH,
+  ###   representing ORX comms (DSN pass)
   if 'create' in sys.argv[1:]:
 
     try: os.unlink(CK)                                     ### Remove CK, if present
@@ -43,12 +48,38 @@ if "__main__" == __name__:
 
     sp.ckcls(ckHandle)                                     ### Close CK
 
+    ####################################################################
+
+    try: os.unlink(CKcomms)                                  ### Remove CK, if present
+    except: pass
+
+    ckHandle = sp.ckopn(CKcomms,CKcomms,0)                   ### Open CK, get handle
+
+    h8 = spd / 3
+
+    et8s = [ets[0], ets[0] + h8]
+
+    while et8s[1] < ets[2]:
+      dpsclks = [sp.sce2t(-64,et) for et in et8s]            ### Convert ETs to encoded SCLKs
+      sp.ckw02(ckHandle                                      ### Write type 2 segment
+              , dpsclks[0], dpsclks[1]                       ### Start and stop encoded SCLKs for segement
+              , -64000, 'ORX_RTN_EARTH'                      ### ORX_SPACECRAFT frame w.r.t. nadir-ish frame
+              , 'ORX_ORX_RTN_EARTH'                          ### Segment name
+              , 1                                            ### One record
+              , [dpsclks[0]], [dpsclks[1]]                   ### Start and stop encoded SCLK lists
+              , [[1.,0.,0.,0.]]                              ### Identity quaternion
+              , [[0.,0.,0.]]                                 ### Angular velocity is zero
+              , [(et8s[1]-et8s[0])/(dpsclks[1]-dpsclks[0])]  ### Seconds per tick
+              )
+      et8s = [et+spd for et in et8s]
+
+    sp.ckcls(ckHandle)                                     ### Close CK
+
 
   ######################################################################
   ### Test CK
   if 'test' in sys.argv[1:]:
 
-    spd = sp.spd()        ### Seconds Per Day
     clight = sp.clight()  ### Speed of light, km/s
 
     sp.furnsh(SPK)        ### Load SPK and CK
