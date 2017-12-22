@@ -10,9 +10,9 @@ CKNADIRISH=kernels/orx_nadirish.bc
 all: $(BSPS) $(CKNADIRISH)
 
 test: all
-	python create_nadirish_ck.py test
+	python nadirish_ck.py test
 
-$(CKNADIRISH): create_nadirish_ck.py
+$(CKNADIRISH): nadirish_ck.py
 	python $< create
 
 %.bsp: %.pinpoint kernels/base_9101955.pinpoint

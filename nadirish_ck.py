@@ -10,64 +10,72 @@ if "__main__" == __name__:
   metaK = 'kernels/orx_base_nadirish.tm'
   CK = 'kernels/orx_nadirish.bc'
   SPK = 'kernels/100m_9101955.bsp'
-  utcs = '2018-229/12:00 2019-140/12:00'.split()
+  utcs = '2018-337/12:00 2019-140/12:00'.split()
 
   sp.furnsh(metaK)
 
-  ets = [sp.tparse(utc,99)[0] for utc in utcs]
-  dpsclks = [sp.sce2t(-64,et) for et in ets]
+  ets = [sp.tparse(utc,99)[0] for utc in utcs]  ### Convert UTCs to ETs
+  dpsclks = [sp.sce2t(-64,et) for et in ets]    ### Convert ETs to encoded SCLKs
 
 
   ######################################################################
+  ### Write CK - single segment with ORX_SPACECRAFT (-64000) frame lining
+  ###            lining up with ORX_BENNU_SUN_NADIRISH frame, so actual
+  ###            location of 9101955 body when CK is searched will
+  ###            determine actual pointing
   if 'create' in sys.argv[1:]:
 
-    try: os.unlink(CK)
+    try: os.unlink(CK)                                     ### Remove CK, if present
     except: pass
 
-    ckHandle = sp.ckopn(CK,CK,0)
-    sp.ckw02(ckHandle
-            , dpsclks[0], dpsclks[1]
-            , -64000, 'ORX_BENNU_SUN_NADIRISH'
-            , 'ORX_BENNU_SUN_NADIRISH'
-            , 1
-            , [dpsclks[0]], [dpsclks[1]]
-            , [[1.,0.,0.,0.]]
-            , [[0.,0.,0.]]
-            , [(ets[1]-ets[0])/(dpsclks[1]-dpsclks[0])]
+    ckHandle = sp.ckopn(CK,CK,0)                           ### Open CK, get handle
+
+    sp.ckw02(ckHandle                                      ### Write type 2 segment
+            , dpsclks[0], dpsclks[1]                       ### Start and stop encoded SCLKs for segement
+            , -64000, 'ORX_BENNU_SUN_NADIRISH'             ### ORX_SPACECRAFT frame w.r.t. nadir-ish frame
+            , 'ORX_BENNU_SUN_NADIRISH'                     ### Segment name
+            , 1                                            ### One record
+            , [dpsclks[0]], [dpsclks[1]]                   ### Start and stop encoded SCLK lists
+            , [[1.,0.,0.,0.]]                              ### Identity quaternion
+            , [[0.,0.,0.]]                                 ### Angular velocity is zero
+            , [(ets[1]-ets[0])/(dpsclks[1]-dpsclks[0])]    ### Seconds per tick
             )
-    sp.ckcls(ckHandle)
+
+    sp.ckcls(ckHandle)                                     ### Close CK
 
 
   ######################################################################
+  ### Test CK
   if 'test' in sys.argv[1:]:
 
-    spd = sp.spd()
-    clight = sp.clight()
+    spd = sp.spd()        ### Seconds Per Day
+    clight = sp.clight()  ### Speed of light, km/s
 
-    sp.furnsh(SPK)
+    sp.furnsh(SPK)        ### Load SPK and CK
     sp.furnsh(CK)
 
-    et = ets[0] + 1.
-    ds = []
-    offsets = []
+    et = ets[0] + 1.      ### Move away from boundary in CK
+    dLocs = []            ### List of distance between Bennu and 9101955 from Law of Cosines
+    offsets = []          ### List of distance between Bennu and 9101955 from SPKPOS
 
     while et < ets[1]:
 
       try:
 
+        ### Use SPKPOS to calculate positions and light times: ORX to Bennu;
+        ### ORX to 9101955; 9101955 to Bennu.
         vBennu, ltBennu = sp.spkpos('BENNU', et, 'ORX_SPACECRAFT', 'NONE', 'ORX')
         vIsh, ltIsh = sp.spkpos('9101955', et, 'ORX_SPACECRAFT', 'NONE', 'ORX')
         vBennuIsh, ltBennuIsh = sp.spkpos('BENNU', et, 'J2000', 'NONE', '9101955')
 
-        vsepBennu = sp.vsep([0.,0.,1.], vBennu)
-        normBennu = ltBennu * clight
-        assert normBennu < 100000
-        normIsh = ltIsh * clight
-        normBennuIsh = ltBennuIsh * clight
+        ### Limit roundoff error, not needed for proxops (time range
+        ### starting at 2018-337)
+        ### assert (ltBennu * clight) < 100000
 
-        ds.append(math.sqrt((normBennu*normBennu) + (normIsh*normIsh) - (2 * normBennu * normIsh * math.cos(vsepBennu))))
-        #ds.append(math.sqrt(sp.vdot(vBennu,vBennu) + sp.vdot(vIsh,vIsh) - (2 * sp.vdot(vBennu,vIsh))))
-        offsets.append(normBennuIsh)
+        ### Law of cosines calculation of Bennu-9101955 distatnce
+        dLocs.append(math.sqrt(sp.vdot(vBennu,vBennu) + sp.vdot(vIsh,vIsh) - (2 * sp.vdot(vBennu,vIsh))))
+
+        offsets.append(ltBennuIsh * clight)
  
       except AssertionError: pass
       except sp.stypes.SpiceyError:
@@ -77,9 +85,13 @@ if "__main__" == __name__:
 
       et += spd / 4
 
-    assert max(ds) < 0.1001
-    assert max(offsets) < 0.10001 and max(offsets) > 0.09999
+    ### Tests:
+
+    assert max(dLocs) < 0.100001
+    assert max(offsets) < 0.100001 and min(offsets) > 0.099999
 
 
   ######################################################################
+  ### Cleanup:  unload kernels
+
   sp.kclear()
