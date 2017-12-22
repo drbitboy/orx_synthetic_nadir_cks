@@ -10,7 +10,7 @@ if "__main__" == __name__:
   metaK = 'kernels/orx_base_nadirish.tm'
   CK = 'kernels/orx_nadirish.bc'
   SPK = 'kernels/100m_9101955.bsp'
-  utcs = '2018-337/12:00 2019-140/12:00'.split()
+  utcs = '2018-229/12:00 2018-337/12:00 2019-140/12:00'.split()
 
   sp.furnsh(metaK)
 
@@ -31,14 +31,14 @@ if "__main__" == __name__:
     ckHandle = sp.ckopn(CK,CK,0)                           ### Open CK, get handle
 
     sp.ckw02(ckHandle                                      ### Write type 2 segment
-            , dpsclks[0], dpsclks[1]                       ### Start and stop encoded SCLKs for segement
+            , dpsclks[0], dpsclks[2]                       ### Start and stop encoded SCLKs for segement
             , -64000, 'ORX_BENNU_SUN_NADIRISH'             ### ORX_SPACECRAFT frame w.r.t. nadir-ish frame
             , 'ORX_BENNU_SUN_NADIRISH'                     ### Segment name
             , 1                                            ### One record
-            , [dpsclks[0]], [dpsclks[1]]                   ### Start and stop encoded SCLK lists
+            , [dpsclks[0]], [dpsclks[2]]                   ### Start and stop encoded SCLK lists
             , [[1.,0.,0.,0.]]                              ### Identity quaternion
             , [[0.,0.,0.]]                                 ### Angular velocity is zero
-            , [(ets[1]-ets[0])/(dpsclks[1]-dpsclks[0])]    ### Seconds per tick
+            , [(ets[2]-ets[0])/(dpsclks[2]-dpsclks[0])]    ### Seconds per tick
             )
 
     sp.ckcls(ckHandle)                                     ### Close CK
@@ -54,11 +54,11 @@ if "__main__" == __name__:
     sp.furnsh(SPK)        ### Load SPK and CK
     sp.furnsh(CK)
 
-    et = ets[0] + 1.      ### Move away from boundary in CK
+    et = ets[1]           ### Move away from boundary in CK
     dLocs = []            ### List of distance between Bennu and 9101955 from Law of Cosines
     offsets = []          ### List of distance between Bennu and 9101955 from SPKPOS
 
-    while et < ets[1]:
+    while et < ets[2]:
 
       try:
 
