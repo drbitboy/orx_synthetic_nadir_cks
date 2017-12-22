@@ -1,0 +1,7 @@
+\begindata
+ALT_BENNU_XYZ = ( xxx 0 0 )
+KERNELS_TO_LOAD = (
+  'kernels/base_9101955.pinpoint'
+)
+\begintext
+
