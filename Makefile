@@ -23,5 +23,8 @@ $(CKNADIRISH) $(CKCOMMS): nadirish_ck.py
 %m_9101955.pinpoint: kernels/xxxm_9101955_template.pinpoint
 	sed '/^ALT_BENNU_XYZ *=/s/= ( xxx 0 0 )/= ( 0.$(@:kernels/%m_9101955.pinpoint=%) 0 0 )/' < $< > $@
 
+tar: all
+	tar zcvf kernels.tar.gz kernels/*.t* kernels/*.bc kernels/*55.bsp
+
 clean:
 	$(RM) $(PINPOINTS) $(BSPS) $(CKNADIRISH) $(CKCOMMS)
